@@ -12,10 +12,8 @@ def main():
                         default="results_fog.csv") 
     # subgroups: results_clean_tract_ahrq_AQIimp1_baseline_SGs_2.csv
     # Sep subgroups: results_clean_tract_ahrq_AQIimp1_baseline_sep_SGs.csv
-    username = urllib.parse.quote_plus('fensorechase')
-    password = urllib.parse.quote_plus('7pzNiMi7dD!d@Ab')
+
     parser.add_argument("-mongo_url", default = 'mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.10.5')
-    # 'mongodb+srv://%s:%s@cluster0.ysobo3u.mongodb.net/' % (username, password)) 
     parser.add_argument("-mongo_db",
                         default="aequitas")
     parser.add_argument("-mongo_col",

@@ -155,8 +155,6 @@ def parse_array_string(array_str):
 def main():
     parser = argparse.ArgumentParser()
     # mongo information
-    username = urllib.parse.quote_plus('fensorechase')
-    password = urllib.parse.quote_plus('7pzNiMi7dD!d@Ab')
     parser.add_argument("-mongo_url", default = 'mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.10.5') 
     parser.add_argument("-mongo_db",
                         default="aequitas")
