@@ -1,0 +1,65 @@
+{
+    
+    "age_at_enrollment":
+    [
+        "age_at_enrollment"
+    ],
+    "Sex":
+    [
+        "Male",
+        "Female"
+    ],
+    "race":
+    [
+        "White",
+        "Black",
+        "Other_race"
+    ],
+    "demo":
+    [
+        "Male",
+        "Female",
+        "White",
+        "Black",
+        "Other_race",
+        "age_at_enrollment"
+    ],
+    "clinical":
+    [
+        "faller",
+        "pd_duration",
+        "num_falls",
+        "mds_updrs_iii_total_video",
+        "minibestest_total"
+    ],
+    "simple_lexical":
+    [
+        "char_count",
+        "word_count",
+        "punctuation_count",
+        "title_word_count",
+        "stopword_count"
+    ],
+    "POS":
+    [
+        "noun_count",
+        "verb_count",
+        "adj_count",
+        "adv_count",
+        "pron_count"
+    ],
+    "word_ngram":
+    [
+        "pp_fall_description"
+    ],
+    "char_ngram":
+    [
+        "pp_fall_description"
+    ],
+    "tfidf_ngram":
+    [
+        "pp_fall_description"
+    ]
+
+
+}

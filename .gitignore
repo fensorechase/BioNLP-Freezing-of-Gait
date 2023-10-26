@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+
+
+# All csv files, to exclude any patient data, even if de-identified
+*.csv
+
+
 # C extensions
 *.so
 

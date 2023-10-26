@@ -1,0 +1,22 @@
+{
+    "demo_and_clinical":
+    [
+        "demo",
+        "clinical"
+    ],
+    "demo_clinical_simple_lexical":
+    [
+        "demo",
+        "clinical",
+        "simple_lexical"
+    ],
+    "demo_clinical_simple_lexical_POS":
+    [
+        "demo",
+        "clinical",
+        "simple_lexical",
+        "POS"
+    ]
+
+
+}

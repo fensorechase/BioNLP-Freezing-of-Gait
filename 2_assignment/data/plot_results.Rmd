@@ -1,0 +1,258 @@
+---
+title: "plot_results"
+author: "Chase Fensore"
+date: "2023-10-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Read in results_fog.csv
+```{r}
+library(caret)
+library(sets)
+library(scales)
+library(stringr)
+library(tableone)
+library(kableExtra) # install.packages("kableExtra")
+library(knitr)
+library(stringr)
+
+library(tidyr)
+#library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(data.table)
+
+library(ggsci) # For publishing group-specific color scemes
+
+```
+
+
+```{r}
+results_file <- read.csv("results_fog.csv") 
+
+```
+
+# Choose best model based on CV metrics...
+- based on 5-fold validation, & holdout test accuracy.
+```{r}
+# Val
+val_results <- results_file[results_file$set == "validation",]
+
+# Val: Across all feats & subgroups.
+avg_acc <- val_results %>% group_by(model) %>% summarise(mean_acc = mean(accuracy)) %>% arrange(model, desc(mean_acc))
+avg_acc <- avg_acc %>% arrange(desc(mean_acc))
+avg_acc
+# 1st row here is model with HIGHEST mean AUC (among subgroups, feats, and folds.)
+# Micro
+avg_micro <- val_results %>% group_by(model) %>% summarise(mean_micro = mean(microF1)) %>% arrange(model, desc(mean_micro))
+avg_micro <- avg_micro %>% arrange(desc(mean_micro))
+avg_micro
+# Macro
+avg_macro <- val_results %>% group_by(model) %>% summarise(mean_macro = mean(macroF1)) %>% arrange(model, desc(mean_macro))
+avg_macro <- avg_macro %>% arrange(desc(mean_macro))
+avg_macro
+
+```
+# Choose best model based on HOLDOUT metrics...
+```{r}
+
+# Holdout
+test_results <- results_file[results_file$set == "holdout",]
+
+# Val: Across all feats & subgroups.
+avg_acc <- test_results %>% group_by(model) %>% summarise(mean_acc = mean(accuracy)) %>% arrange(model, desc(mean_acc))
+avg_acc <- avg_acc %>% arrange(desc(mean_acc))
+avg_acc
+# 1st row here is model with HIGHEST mean AUC (among subgroups, feats, and folds.)
+# Micro
+avg_micro <- test_results %>% group_by(model) %>% summarise(mean_micro = mean(microF1)) %>% arrange(model, desc(mean_micro))
+avg_micro <- avg_micro %>% arrange(desc(mean_micro))
+avg_micro
+# Macro
+avg_macro <- test_results %>% group_by(model) %>% summarise(mean_macro = mean(macroF1)) %>% arrange(model, desc(mean_macro))
+avg_macro <- avg_macro %>% arrange(desc(mean_macro))
+avg_macro
+
+```
+
+# Generate "model" vs. "feat" accuracy table
+- Choose: val_results, or test_results
+```{r}
+# Group the data by "model" and "feat" and calculate the mean of "accuracy"
+
+# accuracy
+# microF1
+# macroF1
+
+avg_acc_by_model_feat <- test_results %>%
+  filter(subgroup == "ALL") %>%
+  group_by(model, feat) %>%
+  summarise(mean_acc = mean(macroF1)) %>%
+  arrange(model, feat)
+
+# Filter to keep only rows for the 10 "accuracy" statistics on "feat"
+filtered_table <- avg_acc_by_model_feat %>% filter(feat %in% c(
+  "age_at_enrollment",
+  "Sex",
+  "race",
+  "demo",
+  "clinical",
+  "demo_and_clinical",
+  "simple_lexical",
+  "POS",
+  "demo_clinical_simple_lexical",
+  "demo_clinical_simple_lexical_POS",
+  "word_ngram"
+))
+
+# Reshape the data to have "model" as rows and "feat" as columns
+wide_table <- pivot_wider(filtered_table, names_from = feat, values_from = mean_acc)
+
+# Transpose the data to have "feat" as rows and "model" as columns
+flipped_table <- as.data.frame(t(wide_table))
+
+# Format the numeric cells to display only three decimal places
+formatted_table <- lapply(names(flipped_table), function(col_name) {
+  if (grepl("^mean_", col_name)) {
+    formatted_values <- as.numeric(sprintf("%.3f", as.numeric(flipped_table[col_name])))
+    formatted_values
+  } else {
+    flipped_table[col_name]
+  }
+})
+
+# Convert the list to a data frame
+formatted_df <- as.data.frame(formatted_table)
+
+# Set the column names to be the values of "model"
+colnames(formatted_df) <- formatted_df[1, ]
+
+# Remove the first row (which is now the column names)
+formatted_df <- formatted_df[-1, ]
+
+formatted_df <- formatted_df %>%
+  mutate_all(as.numeric)
+
+# Convert the table to LaTeX format using kable
+latex_table <- kable(formatted_df, format = "latex", booktabs = TRUE, digits = 3)
+
+# Print the LaTeX table
+cat(latex_table)
+```
+
+
+# Based on above, we will show remaining results on 1 algorithm: 
+- we choose *XGBoost*, due to highest mean metrics across ALL feature setsfor both CV & holdout sets
+```{r}
+
+val_results <- val_results[val_results$model == "xgboost", ]
+test_results <- test_results[test_results$model == "xgboost", ]
+
+
+```
+
+
+# Plot subgroup results
+# Only on 1 algorithm (chosen above)
+```{r}
+plot_res <- val_results # OR holdout_results
+
+# Stratify by feat, then by subgroup.
+by_feat_groups <- plot_res %>% group_by(feat, subgroup) %>% summarise(mean_acc = mean(accuracy)) %>% arrange(feat, desc(mean_acc))
+
+
+
+feat_order <- c( 
+  
+    "age_at_enrollment",
+       "Sex",
+       "race",
+       "demo",
+    
+       "clinical",
+    
+       "demo_and_clinical",
+    
+       "simple_lexical",
+       "POS",
+
+       
+       "demo_clinical_simple_lexical",
+       "demo_clinical_simple_lexical_POS",
+        "word_ngram"
+        
+        )
+
+by_feat_groups <- by_feat_groups[by_feat_groups$feat %in% feat_order, ]
+
+by_feat_groups$feat <- factor(by_feat_groups$feat, levels=feat_order)
+
+  
+
+# Make plot
+plt_by_feats <- ggplot(
+    data = by_feat_groups, 
+    aes(x=feat, y=mean_acc, group=feat, color=subgroup, group=INDEX, color=INDEX)) +
+  geom_point( position = position_dodge2(
+  width = 0.5,
+  preserve = "total",
+  padding = 0.1,
+  reverse = FALSE
+
+))+
+    facet_grid(cols = vars(feat), scales = "free_x", space = "free_x") +
+  theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1), panel.spacing.x = unit(0.001, "cm"),
+        strip.text.x = element_blank()) + 
+  xlab("Feature Set") +
+  ylab("Mean Accuracy (5-fold CV)") +
+scale_color_d3("category20") 
+
+plt_by_feats # Show plot
+```
+
+# Train set size plot:
+- feat: "demo_clinical_simple_lexical" (because best feat from ablation)
+- model: "xgboost" (because best from algorithm comparison)
+- NOTE: do "holdout" only here.
+```{r}
+
+# Read in train size exp file:
+size_results <- read.csv("size_results_fog.csv") 
+
+
+# test_results <- results_file[results_file$set == "holdout" & results_file$subgroup == "ALL" & results_file$model == "xgboost",]
+test_results <- subset(size_results, set == "holdout" & subgroup == "ALL" & model == "xgboost")
+
+
+
+
+# ONLY get "xgboost"
+
+# Grab "accuracy" from plot_res across different "train_pct"...
+ggplot(test_results, aes(x = train_pct)) +
+  geom_line(aes(y = accuracy, color = "Accuracy")) +
+  geom_line(aes(y = microF1, color = "Micro F1")) +
+  geom_line(aes(y = macroF1, color = "Macro F1")) +
+  scale_color_manual(values = c("Accuracy" = "blue", "Micro F1" = "red", "Macro F1" = "green")) +
+  labs(
+       x = "Training Proportion",
+       y = "Performance") +
+  theme_minimal() +
+  theme(legend.title = element_blank()) +
+  labs(color = "Legend") +
+  scale_x_continuous(limits = c(0, 1)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme(legend.position = "top")
+
+
+
+
+
+
+```
+
